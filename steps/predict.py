@@ -1,29 +1,30 @@
-import os
+import pandas as pd
 import joblib
-from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
+import yaml
 
-class Predictor:
-    def __init__(self):
-        self.model_path = self.load_config()['model']['store_path']
-        self.pipeline = self.load_model()
 
-    def load_config(self):
-        import yaml
-        with open('config.yml', 'r') as config_file:
-            return yaml.safe_load(config_file)
-        
-    def load_model(self):
-        model_file_path = os.path.join(self.model_path, 'model.pkl')
-        return joblib.load(model_file_path)
+def evaluate_model():
 
-    def feature_target_separator(self, data):
-        X = data.iloc[:, :-1]
-        y = data.iloc[:, -1]
-        return X, y
+    # load config
+    with open("config.yml", "r") as file:
+        config = yaml.safe_load(file)
 
-    def evaluate_model(self, X_test, y_test):
-        y_pred = self.pipeline.predict(X_test)
-        accuracy = accuracy_score(y_test, y_pred)
-        class_report = classification_report(y_test, y_pred)
-        roc_auc = roc_auc_score(y_test, y_pred)
-        return accuracy, class_report, roc_auc
+    target_column = config["data"]["target_column"]
+    model_path = config["model"]["store_path"] + "/model.pkl"
+
+    # load model pipeline
+    model = joblib.load(model_path)
+
+    # load test data
+    df = pd.read_csv("data/clean_test.csv")
+
+    # split features and target
+    X_test = df.drop(columns=[target_column])
+    y_test = df[target_column]
+
+    # predictions
+    y_pred = model.predict(X_test)
+
+    print("Predictions completed")
+
+    return y_test, y_pred

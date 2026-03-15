@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/nithineleti/Downloads/PROJECTS/mlops-project-main/mlruns/688285688471070773/220d1678bf8a491eb8ca5d69fe70be8d/artifacts
+end_time: 1773581524732
+entry_point_name: ''
+experiment_id: '688285688471070773'
+lifecycle_stage: active
+run_id: 220d1678bf8a491eb8ca5d69fe70be8d
+run_name: receptive-whale-118
+run_uuid: 220d1678bf8a491eb8ca5d69fe70be8d
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773581456207
+status: 3
+tags: []
+user_id: nithineleti

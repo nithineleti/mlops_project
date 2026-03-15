@@ -1,6 +1,7 @@
 data: 
   train_path: data/train.csv
   test_path: data/test.csv
+  target_column: target
 
 train:
   test_size: 0.2

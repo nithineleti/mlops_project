@@ -1,0 +1,28 @@
+stages:
+  data_ingestion:
+    cmd: python dataset.py
+    deps:
+      - dataset.py
+    outs:
+      - data/train.csv
+      - data/test.csv
+
+  data_cleaning:
+    cmd: python steps/clean.py
+    deps:
+      - data/train.csv
+      - data/test.csv
+      - steps/clean.py
+    outs:
+      - data/clean_train.csv
+      - data/clean_test.csv
+
+  model_training:
+    cmd: python main.py
+    deps:
+      - main.py
+      - steps/train.py
+      - steps/clean.py
+      - config.yml
+    outs:
+      - models/model.pkl
