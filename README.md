@@ -1,146 +1,161 @@
-# MLOps Classification Pipeline
+# MLOps classification pipeline
 
-This project implements a **complete end-to-end Machine Learning Operations (MLOps) pipeline** for a classification problem. The pipeline automates data generation, preprocessing, model training, experiment tracking, and deployment using modern MLOps tools.
+End-to-end **MLOps** demo for **binary classification**: data ingestion → cleaning → training → evaluation → **MLflow** logging and model registry → **FastAPI** serving → optional **Docker** deployment. Uses **DVC** for reproducible pipeline stages and **scikit-learn** for modeling.
 
-The project integrates the following MLOps tools:
-
-- **DVC** → Data and pipeline versioning  
-- **MLflow** → Experiment tracking and model registry  
-- **FastAPI** → Model serving API  
-- **Docker** → Containerized deployment  
-- **Scikit-learn** → Machine learning model development  
-
-This project demonstrates how to build **production-ready machine learning pipelines** used in real-world ML systems.
+**Stack:** DVC · MLflow · FastAPI · Docker · scikit-learn · pandas
 
 ---
 
-# 🚀 Features
+## What this project does
 
-### Data Generation & Ingestion
-- Generates synthetic classification datasets using `sklearn.datasets.make_classification`.
-- Simulates real-world ML data ingestion pipelines.
+| Stage | What happens |
+|--------|----------------|
+| Ingestion | Load train/test CSVs (from `config.yml`). |
+| Cleaning | Handle missing values; ensure numeric target. |
+| Training | Sklearn **pipeline** (e.g. scaling, one-hot encoding) + classifier from config. |
+| Evaluation | Accuracy, ROC AUC, classification report. |
+| MLflow | Logs params, metrics, artifacts; registers model **`insurance_model`**. |
+| API | Loads `models/model.pkl` and serves predictions at `POST /predict`. |
 
-### Data Cleaning
-- Handles missing values.
-- Converts the target column into numeric format.
-- Ensures clean and consistent training data.
+**Outputs (local, after `python main.py`):**
 
-### Model Training & Preprocessing
-Uses **Scikit-learn pipelines** for preprocessing and modeling.
-
-Preprocessing techniques:
-- `StandardScaler`
-- `OneHotEncoder`
-
-Supported models:
-- Logistic Regression
-- Decision Tree
-- Random Forest
-- Gradient Boosting
-
-### Experiment Tracking
-All experiments are logged using **MLflow**, including:
-
-- hyperparameters
-- metrics
-- trained models
-- experiment runs
-
-Tracked metrics include:
-- Accuracy
-- ROC AUC
-- Precision
-- Recall
-
-### Model Registry
-Trained models are registered in the **MLflow Model Registry**, enabling:
-
-- model versioning
-- model stage transitions
-- controlled production deployment
-
-### Pipeline Automation
-The full ML pipeline is automated using **DVC**, ensuring reproducible and versioned ML workflows.
-
-### Model Serving API
-The trained model is served through a **FastAPI REST API**.
-
-### Containerized Deployment
-The entire project can be deployed using **Docker containers**.
-
-### Data Drift Monitoring
-Includes drift detection reports to monitor dataset changes over time.
+- `models/model.pkl` — saved pipeline used by the API.
+- `mlruns/` — MLflow file store (see note below; not committed to Git).
 
 ---
 
-# 🧪 Synthetic Dataset Generation
+## Repository
 
-The project generates synthetic data using **Scikit-learn's `make_classification`** function.
-
-Example:
-
-```python
-from sklearn.datasets import make_classification
-
-X, y = make_classification(
-    n_samples=100000,
-    n_features=10,
-    n_informative=8,
-    n_redundant=2,
-    n_classes=2,
-    random_state=42
-)
-```
-
-This allows us to simulate real-world classification datasets for building the ML pipeline.
-
----
-
-# 📂 Project Structure
-
-```
-.
-├── config.yml                # Centralized configuration (model params, data paths)
-├── dataset.py                # Script to generate synthetic train/test datasets
-├── dvc.yaml                  # DVC pipeline stages definition
-├── dvc.lock                  # DVC pipeline lock file
-├── main.py                   # Main entry point running the MLflow training pipeline
-├── app.py                    # FastAPI model serving API
-│
-├── steps/
-│   ├── ingest.py             # Data ingestion logic
-│   ├── clean.py              # Data cleaning logic
-│   ├── train.py              # Model training pipeline logic
-│   └── predict.py            # Standalone model evaluation script
-│
-├── data/
-│   ├── train.csv
-│   ├── test.csv
-│   ├── clean_train.csv
-│   └── clean_test.csv
-│
-├── models/
-│   └── model.pkl             # Trained model artifact
-│
-├── mlruns/                   # MLflow experiment tracking
-│
-├── Dockerfile                # Docker container configuration
-├── requirements.txt          # Project dependencies
-│
-├── monitor.ipynb             # Monitoring notebook
-├── production_drift.html     # Production drift report
-├── test_drift.html           # Test drift report
-│
-└── README.md
+```bash
+git clone https://github.com/nithineleti/mlops_project.git
+cd mlops_project
 ```
 
 ---
 
-# ⚙️ Configuration (`config.yml`)
+## Prerequisites
 
-The project uses a centralized configuration file to control the pipeline.
+- Python 3.10+ recommended (Dockerfile uses Python 3.10).
+- For DVC pipeline runs: [DVC](https://dvc.org/) installed (`pip install dvc` or use `requirements.txt`).
 
-Example:
+---
+
+## Installation
+
+Create a virtual environment (recommended):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## Run the training pipeline
+
+From the project root:
+
+```bash
+python3 main.py
+```
+
+This runs ingestion → cleaning → training → evaluation, logs to MLflow under `./mlruns`, and registers **`insurance_model`** in the local model registry.
+
+### MLflow UI
+
+After at least one run:
+
+```bash
+mlflow ui --backend-store-uri file:./mlruns
+```
+
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000) to browse experiments, metrics, and registered models.
+
+**Note:** The `mlruns/` directory is listed in `.gitignore`. Clone the repo, then run training locally to generate MLflow data. Do not commit large run artifacts to Git.
+
+---
+
+## Run with DVC
+
+```bash
+dvc repro
+dvc dag
+```
+
+Stages typically follow: data ingestion → data cleaning → model training (see `dvc.yaml`).
+
+---
+
+## Model serving (FastAPI)
+
+Train first so `models/model.pkl` exists, then:
+
+```bash
+uvicorn app:app --host 127.0.0.1 --port 8000 --reload
+```
+
+- Health: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+- Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+### API request body (`POST /predict`)
+
+Fields must match `app.py` (order does not matter in JSON):
+
+```json
+{
+  "Gender": "Male",
+  "Age": 35,
+  "HasDrivingLicense": 1,
+  "RegionID": 28.0,
+  "Switch": 0,
+  "PastAccident": "No",
+  "AnnualPremium": 25000.0
+}
+```
+
+Example response:
+
+```json
+{
+  "predicted_class": 1
+}
+```
+
+---
+
+## Docker
+
+This repo’s image definition is named **`dockerfile`** (lowercase). Build and run:
+
+```bash
+docker build -t mlops-classification -f dockerfile .
+docker run -p 8000:8000 mlops-classification
+```
+
+API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+Ensure `models/model.pkl` is present in the build context (the Dockerfile copies `models/` into the image).
+
+---
+
+## Configuration (`config.yml`)
+
+Central place for data paths, target column, model class name, and hyperparameters.
+
+Supported model names (see `steps/train.py` for the full list) include:
+
+- `LogisticRegression`
+- `DecisionTreeClassifier`
+- `RandomForestClassifier`
+- `GradientBoostingClassifier`
+
+Example shape:
 
 ```yaml
 data:
@@ -156,280 +171,68 @@ model:
   store_path: models/
 ```
 
-Supported models:
-
-- LogisticRegression
-- DecisionTreeClassifier
-- RandomForestClassifier
-- GradientBoostingClassifier
-
-Changing the model or parameters **requires only editing the config file**.
-
 ---
 
-# 💻 Installation & Setup
-
-Clone the repository:
+## Tests
 
 ```bash
-git clone https://github.com/your-username/mlops-classification-pipeline.git
-cd mlops-classification-pipeline
-```
-
-Create virtual environment:
-
-```bash
-python -m venv venv
-source venv/bin/activate
-```
-
-Install dependencies:
-
-```bash
-pip install pandas scikit-learn joblib pyyaml mlflow dvc fastapi uvicorn
+python3 -m pytest tests/ -v
 ```
 
 ---
 
-# ▶️ Running the Pipeline
-
-### Option 1: Run using Python
-
-```bash
-python main.py
-```
-
-Pipeline steps:
-
-1. Data ingestion  
-2. Data cleaning  
-3. Model training  
-4. Model evaluation  
-5. MLflow experiment logging  
-6. Model registry  
-
----
-
-### Option 2: Run using DVC
-
-Run the automated pipeline:
-
-```bash
-dvc repro
-```
-
-Pipeline stages:
+## Project layout
 
 ```
-data_ingestion
-      │
-      ▼
-data_cleaning
-      │
-      ▼
-model_training
+.
+├── config.yml          # Paths, model name, hyperparameters
+├── main.py             # MLflow training entrypoint
+├── app.py              # FastAPI app
+├── dataset.py          # Synthetic dataset generation
+├── dvc.yaml / dvc.lock # DVC pipeline
+├── dockerfile          # API container (lowercase filename)
+├── requirements.txt
+├── steps/              # ingest, clean, train, predict
+├── data/               # Train/test CSVs (not all may be in Git; see .gitignore)
+├── models/             # Trained model.pkl (artifact; often local)
+├── mlruns/             # MLflow file store (gitignored)
+├── tests/
+├── monitor.ipynb
+├── production_drift.html
+├── test_drift.html
+└── README.md
 ```
 
 ---
 
-# 🔁 Pipeline Visualization
+## Data drift
 
-Visualize the pipeline graph:
-
-```bash
-dvc dag
-```
-
-Example output:
-
-```
-data_ingestion
-      │
-      ▼
-data_cleaning
-      │
-      ▼
-model_training
-```
-
-This helps understand the **dependencies between pipeline stages**.
+HTML reports `production_drift.html` and `test_drift.html` illustrate comparing distributions between datasets (open in a browser).
 
 ---
 
-# 📊 Viewing MLflow Results
+## Example metrics
 
-Start MLflow UI:
+Runs are stochastic if data is regenerated; typical ballpark:
 
-```bash
-mlflow ui --backend-store-uri file:./mlruns
-```
+- Accuracy ≈ 0.92  
+- ROC AUC ≈ 0.92  
 
-Open browser:
-
-```
-http://127.0.0.1:5000
-```
-
-Inside MLflow you can view:
-
-- experiment runs
-- hyperparameters
-- metrics
-- model artifacts
-- registered models
+See MLflow or the printed classification report after `python3 main.py`.
 
 ---
 
-# 📦 MLflow Model Registry
-
-The trained model is automatically registered in MLflow.
-
-Model stages include:
-
-- None
-- Staging
-- Production
-- Archived
-
-This allows safe model promotion and deployment.
-
----
-
-# 🌐 Model Serving API
-
-Start FastAPI server:
+## DVC remote storage (optional)
 
 ```bash
-uvicorn app:app --reload
-```
-
-Open API documentation:
-
-```
-http://127.0.0.1:8000/docs
-```
-
-Example request:
-
-```json
-{
-  "feature_0": 0.5,
-  "feature_1": -1.2,
-  "feature_2": 0.3
-}
-```
-
-Example response:
-
-```json
-{
-  "prediction": 1
-}
-```
-
----
-
-# 🐳 Docker Deployment
-
-Build Docker image:
-
-```bash
-docker build -t mlops-classification .
-```
-
-Run container:
-
-```bash
-docker run -p 8000:8000 mlops-classification
-```
-
-Access API:
-
-```
-http://localhost:8000/docs
-```
-
----
-
-# ☁️ DVC Remote Storage (Optional)
-
-DVC can store datasets and models in remote storage.
-
-Example configuration:
-
-```bash
-dvc remote add -d storage s3://mybucket/dvc-storage
+dvc remote add -d storage s3://my-bucket/dvc-storage
 dvc push
 ```
 
-Supported storage backends:
-
-- AWS S3
-- Google Cloud Storage
-- Azure Blob Storage
-- SSH storage
+Supports S3, GCS, Azure, SSH, and other [DVC remotes](https://dvc.org/doc/command-reference/remote).
 
 ---
 
-# 📈 Model Performance
+## Author
 
-Example metrics:
-
-```
-Accuracy Score: 0.9185
-ROC AUC Score: 0.9186
-```
-
-Classification Report:
-
-| Class | Precision | Recall | F1 Score |
-|------|----------|-------|--------|
-| 0 | 0.92 | 0.91 | 0.92 |
-| 1 | 0.91 | 0.92 | 0.92 |
-
----
-
-# 🔁 Data Drift Monitoring
-
-The project includes drift detection reports:
-
-```
-production_drift.html
-test_drift.html
-```
-
-These reports detect **data distribution changes** between training and production datasets.
-
----
-
-# ⭐ Key MLOps Components
-
-| Component | Tool Used |
-|------|------|
-| Data Pipeline | DVC |
-| Experiment Tracking | MLflow |
-| Model Registry | MLflow |
-| Model Training | Scikit-learn |
-| API Serving | FastAPI |
-| Containerization | Docker |
-| Monitoring | Drift Reports |
-
----
-
-# 📚 Future Improvements
-
-Possible improvements include:
-
-- CI/CD pipeline with GitHub Actions
-- Kubernetes deployment
-- Feature Store integration
-- Automated model retraining
-- Real-time monitoring dashboards
-
----
-
-# 👨‍💻 Author
-
-**Nithin Pious**
-
-AI/ML Engineer | MLOps Enthusiast
+**Nithin Pious** — AI/ML engineer · MLOps
